@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>استخراج ۴ رقم آخر از اکسل</title>
+    
+    <!-- تنظیمات PWA برای اندروید -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#27ae60">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- آیکون برای iOS (اختیاری، برای اندروید از manifest خوانده می‌شود) -->
+    <link rel="apple-touch-icon" href="./icon-192.png">
+
+    <!-- فونت و کتابخانه اکسل -->
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #3498db;
+            --success: #27ae60;
+            --bg: #f4f7f6;
+            --text: #2c3e50;
+        }
+
+        body {
+            font-family: 'Vazirmatn', Tahoma, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .description {
+            text-align: center;
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+            line-height: 1.8;
+            direction: ltr; /* برای خوانایی بهتر مثال ها */
+        }
+
+        .form-group {
+            border: 1px solid #e0e6ed;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            background: #fafbfc;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        select, input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        select:disabled, input:disabled {
+            background-color: #eee;
+            cursor: not-allowed;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: var(--success);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.3s;
+            margin-top: 10px;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #219653;
+        }
+
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+            font-weight: bold;
+            min-height: 20px;
+        }
+
+        .status.error { color: #e74c3c; }
+        .status.success { color: var(--success); }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>استخراج ۴ رقم آخر از اعداد</h1>
+        <div class="description">
+            INV-1234-x ➔ 1234<br>
+            123456/5 ➔ 3456<br>
+            4-123456 ➔ 3456<br>
+            123456a ➔ 3456
+        </div>
+
+        <div class="form-group">
+            <label>۱. انتخاب فایل اکسل</label>
+            <input type="file" id="fileInput" accept=".xlsx, .xls">
+        </div>
+
+        <div class="form-group">
+            <label>۲. ستون مورد نظر</label>
+            <select id="columnSelect" disabled>
+                <option value="">ابتدا فایل را انتخاب کنید...</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>۳. نام ستون جدید</label>
+            <input type="text" id="newColName" value="۴ رقم استخراج شده" disabled>
+        </div>
+
+        <button id="processBtn" disabled>پردازش و دانلود فایل</button>
+        <div id="statusMessage" class="status"></div>
+    </div>
+
+    <script>
+        let excelData = [];
+        let headers = [];
+        let fileName = "output.xlsx";
+        
+        const fileInput = document.getElementById('fileInput');
+        const columnSelect = document.getElementById('columnSelect');
+        const newColName = document.getElementById('newColName');
+        const processBtn = document.getElementById('processBtn');
+        const statusMessage = document.getElementById('statusMessage');
+
+        // ثبت Service Worker برای قابلیت آفلاین
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => console.log('Service Worker ثبت شد.'))
+                    .catch(err => console.log('خطا در ثبت Service Worker: ', err));
+            });
+        }
+
+        function setStatus(msg, isError = false) {
+            statusMessage.textContent = msg;
+            statusMessage.className = isError ? 'status error' : 'status success';
+        }
+
+        function extractRight4(value) {
+            if (value === null || value === undefined || value === "") return "";
+            let str = String(value).trim();
+            if (str.endsWith(".0") && !isNaN(str.slice(0, -2))) {
+                str = str.slice(0, -2);
+            }
+            const match = str.match(/[0-9]{4,}/);
+            if (match) {
+                return match[0].slice(-4);
+            }
+            return "";
+        }
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            fileName = "output_" + file.name;
+            setStatus("در حال خواندن فایل...");
+            processBtn.disabled = true;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    excelData = XLSX.utils.sheet_to_json(worksheet, {defval: ""});
+
+                    if (excelData.length === 0) {
+                        setStatus("فایل خالی است یا ساختار مناسبی ندارد.", true);
+                        return;
+                    }
+
+                    headers = Object.keys(excelData[0]);
+                    columnSelect.innerHTML = '<option value="">یک ستون را انتخاب کنید...</option>';
+                    
+                    headers.forEach(header => {
+                        const option = document.createElement('option');
+                        option.value = header;
+                        option.textContent = header;
+                        columnSelect.appendChild(option);
+                    });
+
+                    columnSelect.disabled = false;
+                    newColName.disabled = false;
+                    setStatus(`فایل با موفقیت خوانده شد (${excelData.length} ردیف)`);
+
+                } catch (error) {
+                    setStatus("خطا در خواندن فایل. آیا فرمت فایل صحیح است؟", true);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        columnSelect.addEventListener('change', function() {
+            processBtn.disabled = this.value === "";
+        });
+
+        processBtn.addEventListener('click', function() {
+            const selectedColumn = columnSelect.value;
+            const newColNameValue = newColName.value.trim() || "۴ رقم استخراج شده";
+
+            if (!selectedColumn) {
+                setStatus("لطفا یک ستون انتخاب کنید.", true);
+                return;
+            }
+
+            setStatus("در حال پردازش داده‌ها...");
+            processBtn.disabled = true;
+
+            setTimeout(() => {
+                try {
+                    let successCount = 0;
+                    excelData.forEach(row => {
+                        const originalValue = row[selectedColumn];
+                        const extractedValue = extractRight4(originalValue);
+                        row[newColNameValue] = extractedValue;
+                        if (extractedValue !== "") {
+                            successCount++;
+                        }
+                    });
+
+                    const newWorksheet = XLSX.utils.json_to_sheet(excelData);
+                    const newWorkbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, "Sheet1");
+                    XLSX.writeFile(newWorkbook, fileName);
+
+                    setStatus(`✓ پردازش با موفقیت انجام شد. ${successCount} ردیف استخراج شد.`);
+                } catch (error) {
+                    setStatus("خطا در پردازش فایل.", true);
+                } finally {
+                    processBtn.disabled = false;
+                }
+            }, 100);
+        });
+    </script>
+</body>
+</html>

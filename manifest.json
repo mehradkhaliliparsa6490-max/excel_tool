@@ -1,0 +1,26 @@
+{
+  "name": "استخراج ۴ رقم آخر از اکسل",
+  "short_name": "استخراج ارقام",
+  "description": "ابزاری هوشمند برای استخراج ۴ رقم آخر از اعداد در فایل‌های اکسل",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f7f6",
+  "theme_color": "#27ae60",
+  "dir": "rtl",
+  "lang": "fa",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
